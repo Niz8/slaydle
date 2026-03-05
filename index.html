@@ -602,7 +602,7 @@ width: 100%;
     <div id="scorecard-text"></div>
     <button id="copy-btn">📋 COPY SCORECARD</button>
   </div>
-  <div id="disclaimer">⚠ vibecoded — use at your own risk ⚠ · v0.7.1</div>
+  <div id="disclaimer">⚠ vibecoded — use at your own risk ⚠ · v0.8.0</div>
 
 </div>
 
@@ -735,6 +735,8 @@ let state = {
   selectedElement: null,
   crystalUsed: false,
   crystalTurn: -1,
+  lastCombo: null,     // { weapon, element } of previous turn
+  warnedCombo: null,   // { weapon, element } that received a repeat warning
   gameOver: false,
   victory: false,
   log: [],
@@ -815,53 +817,108 @@ function doAttack() {
   const element = state.selectedElement;
   state.turn++;
 
-  const effectiveness = getEffectiveness(weapon, element);
-  const dmg = DAMAGE[effectiveness];
-  state.goblin.hp -= dmg;
-
-  // Log attack
   const weaponEmoji = {bow:'🏹',sword:'⚔️',club:'🪓'}[weapon];
   const elementEmoji = {fire:'🔥',ice:'❄️',electric:'⚡',physical:'💪'}[element];
 
   addLog(`<span class="log-turn">TURN ${state.turn} ></span> <span class="log-attack">${weaponEmoji} ${weapon.toUpperCase()} + ${elementEmoji} ${element.toUpperCase()}</span>`);
 
-  if (effectiveness === 'veryEffective') {
-    addLog(`<span class="log-very-effective">*** VERY EFFECTIVE! (-${dmg} HP) ***</span>`);
-  } else if (effectiveness === 'effective') {
-    addLog(`<span class="log-effective">~ Effective. (-${dmg} HP)</span>`);
-  } else {
-    addLog(`<span class="log-ineffective">... Ineffective. (0 damage)</span>`);
-  }
+  // Check if weapon breaks this turn
+  const sameAsWarned = state.warnedCombo &&
+    state.warnedCombo.weapon === weapon &&
+    state.warnedCombo.element === element;
 
-  state.attackLog.push({ weapon, element, effectiveness });
-  updateHpBars();
-
-  // Check goblin defeat
-  if (state.goblin.hp <= 0) {
-    state.goblin.hp = 0;
+  if (sameAsWarned) {
+    // Weapon breaks — player takes 2 damage, goblin takes 0
+    addLog(`<span class="log-very-effective">*** YOUR WEAPON BREAKS! ***</span>`);
+    addLog(`<span class="log-goblin-hit">The ${weapon} shatters in your hands! (-2 HP to you)</span>`);
+    state.playerHp = Math.max(0, state.playerHp - 2);
+    state.attackLog.push({ weapon, element, effectiveness: 'broken' });
     updateHpBars();
-    endGame(true);
-    return;
-  }
 
-  // Goblin counter-attack
-  const goblinDmg = state.turn - 1; // turn 1 = 0 dmg, turn 2 = 1 dmg, etc.
-  state.playerHp -= goblinDmg;
+    // Check player death from broken weapon
+    if (state.playerHp <= 0) {
+      state.playerHp = 0;
+      updateHpBars();
+      endGame(false);
+      return;
+    }
 
-  if (goblinDmg === 0) {
-    addLog(`<span class="log-goblin-hit">${state.goblin.name.split(' ')[0]} snarls but hesitates!</span>`);
-  } else {
-    addLog(`<span class="log-goblin-hit">${state.goblin.name.split(' ')[0]} strikes back! (-${goblinDmg} HP)</span>`);
-  }
-
-  updateHpBars();
-
-  // Check player defeat
-  if (state.playerHp <= 0) {
-    state.playerHp = 0;
+    // Goblin still attacks normally
+    const goblinDmg = state.turn - 1;
+    state.playerHp -= goblinDmg;
+    if (goblinDmg === 0) {
+      addLog(`<span class="log-goblin-hit">${state.goblin.name.split(' ')[0]} snarls but hesitates!</span>`);
+    } else {
+      addLog(`<span class="log-goblin-hit">${state.goblin.name.split(' ')[0]} strikes back! (-${goblinDmg} HP)</span>`);
+    }
     updateHpBars();
-    endGame(false);
-    return;
+
+    if (state.playerHp <= 0) {
+      state.playerHp = 0;
+      updateHpBars();
+      endGame(false);
+      return;
+    }
+
+    // Clear warn state after break — no cascading breaks
+    state.warnedCombo = null;
+    state.lastCombo = { weapon, element };
+
+  } else {
+    // Normal attack
+    const effectiveness = getEffectiveness(weapon, element);
+    const dmg = DAMAGE[effectiveness];
+    state.goblin.hp -= dmg;
+
+    if (effectiveness === 'veryEffective') {
+      addLog(`<span class="log-very-effective">*** VERY EFFECTIVE! (-${dmg} HP) ***</span>`);
+    } else if (effectiveness === 'effective') {
+      addLog(`<span class="log-effective">~ Effective. (-${dmg} HP)</span>`);
+    } else {
+      addLog(`<span class="log-ineffective">... Ineffective. (0 damage)</span>`);
+    }
+
+    state.attackLog.push({ weapon, element, effectiveness });
+    updateHpBars();
+
+    // Check goblin defeat before goblin attacks
+    if (state.goblin.hp <= 0) {
+      state.goblin.hp = 0;
+      updateHpBars();
+      endGame(true);
+      return;
+    }
+
+    // Goblin counter-attack
+    const goblinDmg = state.turn - 1;
+    state.playerHp -= goblinDmg;
+    if (goblinDmg === 0) {
+      addLog(`<span class="log-goblin-hit">${state.goblin.name.split(' ')[0]} snarls but hesitates!</span>`);
+    } else {
+      addLog(`<span class="log-goblin-hit">${state.goblin.name.split(' ')[0]} strikes back! (-${goblinDmg} HP)</span>`);
+    }
+    updateHpBars();
+
+    if (state.playerHp <= 0) {
+      state.playerHp = 0;
+      updateHpBars();
+      endGame(false);
+      return;
+    }
+
+    // Check if this combo matches last turn — issue warning
+    const sameAsLast = state.lastCombo &&
+      state.lastCombo.weapon === weapon &&
+      state.lastCombo.element === element;
+
+    if (sameAsLast) {
+      addLog(`<span class="log-hint">⚠️ WARNING: If you use ${weaponEmoji} ${weapon.toUpperCase()} + ${elementEmoji} ${element.toUpperCase()} again, your weapon will break!</span>`);
+      state.warnedCombo = { weapon, element };
+    } else {
+      state.warnedCombo = null;
+    }
+
+    state.lastCombo = { weapon, element };
   }
 
   // Reset selections
@@ -909,7 +966,8 @@ function buildScorecard(victory) {
   const effectivenessEmoji = {
     veryEffective: '💥',
     effective: '✅',
-    ineffective: '❌'
+    ineffective: '❌',
+    broken: '💔'
   };
 
   let card = `SLAYDLE — ${date}\n`;
