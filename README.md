@@ -12,7 +12,7 @@ A Wordle-inspired daily RPG where you battle a new goblin every day. Figure out 
 
 ## How to Play
 
-Each day a new goblin spawns with a secret weakness — one weapon type and one element type. You have **5 HP** and the goblin has **3 HP**.
+Each day a new goblin spawns with a secret weakness — one weapon type and one element type. You have **5 HP** and the goblin has **4 HP**.
 
 **Weapons:** 🏹 Bow · ⚔️ Sword · 🪓 Club  
 **Elements:** 🔥 Fire · ❄️ Ice · ⚡ Electric · 💪 Physical
