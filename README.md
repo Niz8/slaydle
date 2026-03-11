@@ -25,7 +25,7 @@ Each turn, pick one weapon and one element and strike:
 
 After your attack, the goblin strikes back. Goblin damage escalates each turn (0 on turn 1, 1 on turn 2, 2 on turn 3…). Defeat the goblin before your HP hits zero.
 
-**Crystal Ball 🔮** — Once per game, after your first attack, consult the crystal ball to reveal the goblin’s weak element. Costs 2 HP.
+**Crystal Ball 🔮** — Once per game, after your first attack, consult the crystal ball to reveal the goblin’s weak element. Costs 1 HP.
 
 The goblin’s name may hint at its weakness — or may just be flavor. Some days are harder than others.
 
