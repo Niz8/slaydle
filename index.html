@@ -594,7 +594,7 @@ width: 100%;
     <div id="scorecard-text"></div>
     <button id="copy-btn">📋 COPY SCORECARD</button>
   </div>
-  <div id="disclaimer">⚠ vibecoded — use at your own risk ⚠ · v0.9.2</div>
+  <div id="disclaimer">⚠ vibecoded — use at your own risk ⚠ · v0.9.2-beta</div>
 
 </div>
 
@@ -968,7 +968,7 @@ function doAttack() {
 
 function consultCrystalBall() {
   if (state.crystalUsed || state.gameOver) return;
-  if (state.turn < 1) {
+  if (state.turn < 2) {
     addLog(`<span class="log-hint">🔮 The crystal ball is cloudy... try attacking first.</span>`);
     return;
   }
